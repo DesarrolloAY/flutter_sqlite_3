@@ -34,8 +34,9 @@ class _MyHomePageState extends State<MyHomePage> {
   final TextEditingController _EditTituloLibro = TextEditingController();
   List<Libro> _items = [];
 
-  // Clave para el formulario de agregar libro
-  final _formKey = GlobalKey<FormState>();
+  // Claves para los formularios
+  final _formKeyAgregar = GlobalKey<FormState>();
+  final _formKeyEditar = GlobalKey<FormState>();
 
   @override
   void initState() {
@@ -75,7 +76,7 @@ class _MyHomePageState extends State<MyHomePage> {
           child: Container(
             padding: EdgeInsets.all(16.0),
             child: Form(
-              key: _formKey,
+              key: _formKeyAgregar,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -111,7 +112,7 @@ class _MyHomePageState extends State<MyHomePage> {
                       SizedBox(width: 8),
                       ElevatedButton(
                         onPressed: () {
-                          if (_formKey.currentState!.validate()) {
+                          if (_formKeyAgregar.currentState!.validate()) {
                             _agregarNuevoLibro(
                               _EditTituloLibro.text.toString(),
                             );
@@ -137,29 +138,68 @@ class _MyHomePageState extends State<MyHomePage> {
     _cargarListaLibros();
   }
 
-  // Mostrar diálogo de confirmación antes de eliminar un libro
-  void _mostrarMensajeModificar(int id) {
-    showDialog(
+  // Mostrar formulario de confirmación para eliminar un libro
+  void _mostrarFormularioEliminar(int id, String tituloLibro) {
+    showModalBottomSheet(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: Text("Confirmar eliminación"),
-          content: Text("¿Estas seguro de que quieres elimnar este libro?"),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: Text("Cancelar"),
-            ),
-            TextButton(
-              onPressed: () {
-                _eliminarLibro(id);
-                Navigator.of(context).pop();
-              },
-              child: Text("Eliminar"),
-            ),
-          ],
+        return Container(
+          padding: EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                "Confirmar Eliminación",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.red,
+                ),
+              ),
+              SizedBox(height: 16),
+              Text(
+                "¿Estás seguro de que quieres eliminar el libro:",
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16),
+              ),
+              SizedBox(height: 8),
+              Text(
+                "'$tituloLibro'?",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+              SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    child: Text("Cancelar"),
+                  ),
+                  SizedBox(width: 8),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                    ),
+                    onPressed: () {
+                      _eliminarLibro(id);
+                      Navigator.of(context).pop();
+                    },
+                    child: Text(
+                      "Eliminar",
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         );
       },
     );
@@ -176,40 +216,78 @@ class _MyHomePageState extends State<MyHomePage> {
     _cargarListaLibros();
   }
 
-  // Mostrar diálogo para editar el título de un libro
-  void _ventanaEditar(int id, String tituloActual) {
+  // Mostrar formulario para editar el título de un libro
+  void _mostrarFormularioEditar(int id, String tituloActual) {
     // Controlador para el campo de texto con el título actual del libro
     TextEditingController _tituloController = TextEditingController(
       text: tituloActual,
     );
 
-    showDialog(
+    showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       builder: (context) {
-        return AlertDialog(
-          title: Text("Modificar Titulo del Libro"),
-          content: TextField(
-            controller: _tituloController,
-            decoration: InputDecoration(hintText: "Escribe el nuevo titulo"),
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
           ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: Text("Cancelar"),
+          child: Container(
+            padding: EdgeInsets.all(16.0),
+            child: Form(
+              key: _formKeyEditar,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    "Editar Libro",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(height: 8),
+                  Text("ID: $id", style: TextStyle(color: Colors.grey[600])),
+                  SizedBox(height: 16),
+                  TextFormField(
+                    controller: _tituloController,
+                    decoration: InputDecoration(
+                      labelText: "Nuevo título del libro",
+                      hintText: "Ingrese el nuevo título",
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Por favor ingrese un título';
+                      }
+                      return null;
+                    },
+                  ),
+                  SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                        },
+                        child: Text("Cancelar"),
+                      ),
+                      SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: () {
+                          if (_formKeyEditar.currentState!.validate()) {
+                            _actualizarLibro(
+                              id,
+                              _tituloController.text.toString(),
+                            );
+                            Navigator.of(context).pop();
+                          }
+                        },
+                        child: Text("Guardar Cambios"),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-            TextButton(
-              onPressed: () {
-                // Validar que el campo no esté vacío antes de actualizar
-                if (_tituloController.text.isNotEmpty) {
-                  _actualizarLibro(id, _tituloController.text.toString());
-                }
-                Navigator.of(context).pop();
-              },
-              child: Text("Guardar"),
-            ),
-          ],
+          ),
         );
       },
     );
@@ -235,12 +313,18 @@ class _MyHomePageState extends State<MyHomePage> {
             trailing: IconButton(
               icon: Icon(Icons.delete, color: Colors.grey),
               onPressed: () {
-                _mostrarMensajeModificar(int.parse(libro.id.toString()));
+                _mostrarFormularioEliminar(
+                  int.parse(libro.id.toString()),
+                  libro.tituloLibro,
+                );
               },
             ),
-            // Al hacer tap en el libro, abrir ventana de edición
+            // Al hacer tap en el libro, abrir formulario de edición
             onTap: () {
-              _ventanaEditar(int.parse(libro.id.toString()), libro.tituloLibro);
+              _mostrarFormularioEditar(
+                int.parse(libro.id.toString()),
+                libro.tituloLibro,
+              );
             },
           );
         },
